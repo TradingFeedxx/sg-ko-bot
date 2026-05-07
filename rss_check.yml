@@ -1,0 +1,38 @@
+name: RSS News Bot
+
+on:
+  schedule:
+    - cron: "0 6,12,18,0 * * *"  # ogni 6h: mezzanotte, 6, 12, 18 UTC
+  workflow_dispatch:  # permette run manuale dal browser
+
+jobs:
+  check-rss:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # necessario per committare seen.json
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install feedparser requests
+
+      - name: Run bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python rss_bot.py
+
+      - name: Commit seen.json
+        run: |
+          git config user.name "rss-bot"
+          git config user.email "bot@bot.com"
+          git add seen.json
+          git diff --staged --quiet || git commit -m "update seen.json"
+          git push
